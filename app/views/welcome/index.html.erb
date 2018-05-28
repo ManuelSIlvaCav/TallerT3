@@ -29,7 +29,7 @@
         });
       }
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCGArJTbfwmLJaBI-spPdk0TFrjplKHR68&callback=initMap"
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA3qhxMALGvHAgH-cGj4x6WidjOeqqRbjw&callback=initMap"
     async defer></script>
   </body>
 </html>
@@ -37,8 +37,20 @@
 <script type="text/javascript">
     console.log("PRUEBA")
     var sock = io("wss://integracion-tarea-3.herokuapp.com", {path: "/flights"});
-    console.log(sock)
-    sock.on('POSITION', function(data){
+    sock.emit("AIRPORTS");
+    sock.on("AIRPORTS", function(data){
       console.log(data);
+
     });
+    sock.emit("FLIGHTS")
+    sock.on("FLIGHTS", function(data){
+      console.log(data);
+
+    });
+
+
+    // sock.on('POSITION', function(data){
+    //   console.log(data);
+    // });
+
 </script>
