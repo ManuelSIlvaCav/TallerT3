@@ -35,28 +35,47 @@
 </html>
 
 <script type="text/javascript">
-    console.log("PRUEBA")
+    //console.log("PRUEBA")
     var sock = io("wss://integracion-tarea-3.herokuapp.com", {path: "/flights"});
     var puertos = [];
     var puertos_map = {};
     var aviones = [];
-    var lineas_rectas = []
-
+    var lineas_rectas = [];
+    var todos_mis_marker = [];
 
     sock.emit("AIRPORTS");
     sock.on("AIRPORTS", function(data){
 
       for (var key in data){
         puertos.push(key);
+        //console.log("PINTEANDO LA KEY", key)
         var image = 'https://maps.gstatic.com/mapfiles/ms2/micons/blue.png';
         var beachMarker = new google.maps.Marker({
           position: {lat: data[key]["airport_position"][0], lng: data[key]["airport_position"][1]},
           map: map,
           icon: image
         });
+        //Agregamos la infowindow
+        var content_string = '<div id="content">'+
+            '<div id="siteNotice">'+
+            '</div>'+
+            '<h3 id="firstHeading" class="firstHeading">'+ data[key]["name"]+'</h3>'+
+            '<div id="bodyContent">'+
+            '<p><b>'+data[key]["country"]+'</b>' + data[key]["city"] + '</p>'+
+            '<p>'+ data[key]["country_code"]+ ', '+ data[key]["airport_code"] +
+            '</p>'+
+            '<p>'+ data[key]["airport_position"][0] + ','+data[key]["airport_position"][1]+'</p>'
+            '</div>'+
+            '</div>';
+        beachMarker.infowindow = new google.maps.InfoWindow({
+              content: content_string,
+              maxWidth: 200
+        });
+        todos_mis_marker.push(beachMarker);
         puertos_map[key] = beachMarker;
+      };
 
-      }
+
       // console.log(puertos_map)
       // console.log(puertos)
 
@@ -89,16 +108,50 @@
           position: {lat: vuelo["origin"]["airport_position"][0], lng:vuelo["origin"]["airport_position"][1]},
           map: map,
           icon: image
+
         });
-        vuelo_marker.push({code: vuelo["code"], marker: plane, pos: []});
+        todos_mis_marker.push(plane);
+        vuelo_marker.push({code: vuelo["code"], marker: plane, pos: [], data: vuelo});
+
+        //Agreggar la window al avion
+        var content_string = '<div id="content">'+
+            '<div id="siteNotice">'+
+            '</div>'+
+            '<h3 id="firstHeading" class="firstHeading">'+ vuelo["code"] + ', '+ vuelo["airline"]+'</h3>'+
+            '<div id="bodyContent">'+
+            '<p><b>'+vuelo["plane"]+ ', '+'</b>' + "Asientos: " +vuelo["seats"] + '</p>'+
+            '<p>'+ "Origen: " +vuelo["origin"]["airport_code"]+ ', Destino: '+ vuelo["destination"]["airport_code"] +
+            '</p>'+
+            '<p>'+ vuelo["origin"]["airport_position"][0] + ','+vuelo["origin"]["airport_position"][1]+'</p>'
+            '</div>'+
+            '</div>';
+        plane.infowindow = new google.maps.InfoWindow({
+                  content: content_string,
+                  maxWidth: 200
+            });
+        todos_mis_marker.push(plane);
 
       });
-      console.log(vuelo_marker);
+
+      //console.log(vuelo_marker);
+      todos_mis_marker.forEach(function(marker){
+        //console.log(marker, marker.infowindow)
+        marker.addListener('click', function(){
+          //console.log(marker.open)
+          todos_mis_marker.forEach(function(mark){
+            mark.infowindow.close();
+          });
+          marker.infowindow.open(map, marker);
+          //console.log(marker.open)
+        });
+      });
     });
 
 
+
+
     sock.on('POSITION', function(data){
-        console.log(data);
+        //console.log(data);
 
         vuelo_marker.forEach(function(vuelo){
           if (vuelo["code"] == data["code"]){
@@ -112,8 +165,22 @@
             });
             if (esta_en_arreglo ==0){
               vuelo["pos"].push([data["position"][0], data["position"][1]]);
+              //Editar el contenido de la window del vuelo por la nueva coordenada
+              var content_string = '<div id="content">'+
+                  '<div id="siteNotice">'+
+                  '</div>'+
+                  '<h3 id="firstHeading" class="firstHeading">'+ vuelo["data"]["code"] + ', '+ vuelo["data"]["airline"]+'</h3>'+
+                  '<div id="bodyContent">'+
+                  '<p><b>'+vuelo["data"]["plane"]+ ', '+'</b>' + "Asientos: " +vuelo["data"]["seats"] + '</p>'+
+                  '<p>'+ "Origen: " +vuelo["data"]["origin"]["airport_code"]+ ', Destino: '+ vuelo["data"]["destination"]["airport_code"] +
+                  '</p>'+
+                  '<p>'+ data["position"][0]+ ','+data["position"][1]+'</p>'
+                  '</div>'+
+                  '</div>';
+              vuelo["marker"].infowindow.setContent(content_string);
+
             }
-            console.log(vuelo["pos"]);
+            //console.log(vuelo["pos"]);
 
             //Hay que crear el [{},{}] para las polyline
             var arreglo_coordenadas= [];
@@ -128,13 +195,13 @@
                   strokeWeight: 4
                 });
             flightPath.setMap(map);
-
-
           }
+
+
+
         });
-
-
-
     });
+
+    //Agregar funcion que cada cierto tiempo se ejecute para ver los nuevos vuelos si es que nacen o cambian los existentes
 
 </script>
