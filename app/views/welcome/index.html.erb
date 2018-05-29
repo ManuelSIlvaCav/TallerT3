@@ -43,6 +43,7 @@
     var lineas_rectas = [];
     var todos_mis_marker = [];
 
+
     sock.emit("AIRPORTS");
     sock.on("AIRPORTS", function(data){
 
@@ -184,6 +185,15 @@
                   '</div>'+
                   '</div>';
               vuelo["marker"].infowindow.setContent(content_string);
+
+              //Arreglamos la rotacion del avion
+              var point1 = new google.maps.LatLng(data["position"][0], data["position"][1]);
+              var point2 = new google.maps.LatLng(vuelo["data"]["destination"]["airport_position"][0], vuelo["data"]["destination"]["airport_position"][1]);
+              var heading = google.maps.geometry.spherical.computeHeading(point1, point2);
+              //console.log(heading);
+              var icon = vuelo["marker"].getIcon();
+              icon.rotation = heading;
+              vuelo["marker"].setIcon(icon);
 
             }
             //console.log(vuelo["pos"]);
