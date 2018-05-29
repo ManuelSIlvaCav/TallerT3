@@ -24,8 +24,8 @@
       var map;
       function initMap() {
         map = new google.maps.Map(document.getElementById('map'), {
-          center: {lat: -34.397, lng: 150.644},
-          zoom: 8
+          center: {lat: -34.397, lng: -64.4},
+          zoom: 6
         });
       }
     </script>
@@ -37,20 +37,104 @@
 <script type="text/javascript">
     console.log("PRUEBA")
     var sock = io("wss://integracion-tarea-3.herokuapp.com", {path: "/flights"});
+    var puertos = [];
+    var puertos_map = {};
+    var aviones = [];
+    var lineas_rectas = []
+
+
     sock.emit("AIRPORTS");
     sock.on("AIRPORTS", function(data){
-      console.log(data);
+
+      for (var key in data){
+        puertos.push(key);
+        var image = 'https://maps.gstatic.com/mapfiles/ms2/micons/blue.png';
+        var beachMarker = new google.maps.Marker({
+          position: {lat: data[key]["airport_position"][0], lng: data[key]["airport_position"][1]},
+          map: map,
+          icon: image
+        });
+        puertos_map[key] = beachMarker;
+
+      }
+      // console.log(puertos_map)
+      // console.log(puertos)
 
     });
+
+    var vuelo_marker = [];
     sock.emit("FLIGHTS")
     sock.on("FLIGHTS", function(data){
-      console.log(data);
+      aviones = data;
+      //console.log(aviones);
+      aviones.forEach(function(vuelo){
+        // lineas_rectas = [{lat: vuelo["origin"]["airport_position"][0], lng:vuelo["origin"]["airport_position"][1]},
+        //                 {lat: vuelo["destination"]["airport_position"][0], lng:vuelo["destination"]["airport_position"][1]}];
+        lineas_rectas.push({lat: vuelo["origin"]["airport_position"][0], lng:vuelo["origin"]["airport_position"][1]});
+        lineas_rectas.push({lat: vuelo["destination"]["airport_position"][0], lng:vuelo["destination"]["airport_position"][1]});
+        //console.log(vuelo["origin"]["airport_position"][0], vuelo["origin"]["airport_position"][1]);
+        var flightPath = new google.maps.Polyline({
+              path: lineas_rectas,
+              geodesic: true,
+              strokeColor: '#FF0000',
+              strokeOpacity: 1.0,
+              strokeWeight: 3
+            });
+        flightPath.setMap(map);
+        lineas_rectas = [];
 
+        //Creao EL Marker del Avion
+        var image = 'https://maps.gstatic.com/mapfiles/ms2/micons/plane.png';
+        var plane = new google.maps.Marker({
+          position: {lat: vuelo["origin"]["airport_position"][0], lng:vuelo["origin"]["airport_position"][1]},
+          map: map,
+          icon: image
+        });
+        vuelo_marker.push({code: vuelo["code"], marker: plane, pos: []});
+
+      });
+      console.log(vuelo_marker);
     });
 
 
-    // sock.on('POSITION', function(data){
-    //   console.log(data);
-    // });
+    sock.on('POSITION', function(data){
+        console.log(data);
+
+        vuelo_marker.forEach(function(vuelo){
+          if (vuelo["code"] == data["code"]){
+            //Reviso si la Pos ya estaba
+            vuelo["marker"].setPosition({lat: data["position"][0], lng: data["position"][1]});
+            var esta_en_arreglo = 0;
+            vuelo["pos"].forEach(function(posi){
+              if (posi[0]==data["position"][0] && posi[1]==data["position"][1]){
+                esta_en_arreglo = 1;
+              }
+            });
+            if (esta_en_arreglo ==0){
+              vuelo["pos"].push([data["position"][0], data["position"][1]]);
+            }
+            console.log(vuelo["pos"]);
+
+            //Hay que crear el [{},{}] para las polyline
+            var arreglo_coordenadas= [];
+            vuelo["pos"].forEach(function(arr){
+              arreglo_coordenadas.push({lat: arr[0], lng: arr[1]});
+            });
+            var flightPath = new google.maps.Polyline({
+                  path: arreglo_coordenadas,
+                  geodesic: true,
+                  strokeColor: '#58ff33',
+                  strokeOpacity: 1.0,
+                  strokeWeight: 4
+                });
+            flightPath.setMap(map);
+
+
+          }
+        });
+
+
+
+    });
 
 </script>
